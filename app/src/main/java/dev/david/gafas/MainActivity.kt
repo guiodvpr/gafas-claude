@@ -35,9 +35,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.meta.wearable.dat.core.Wearables
 import com.meta.wearable.dat.core.types.Permission
+import com.meta.wearable.dat.core.types.PermissionStatus
 import dev.david.gafas.gafas.Gafas
 import dev.david.gafas.herramientas.Catalogo
 import dev.david.gafas.nucleo.Ajustes
+import dev.david.gafas.nucleo.Diario
 import dev.david.gafas.nucleo.Estado
 import dev.david.gafas.servicio.AsistenteService
 import dev.david.gafas.ui.Acciones
@@ -74,9 +76,16 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // El permiso de cámara de las gafas no es de Android: se concede dentro de la app Meta AI
-    private val permisoCamaraGafas = registerForActivityResult(Wearables.RequestPermissionContract()) {
-        Gafas.revisarPermisoDeCamara()
+    // El permiso de cámara de las gafas no es de Android: se concede dentro de la app Meta AI.
+    // Meta AI abre su propia ventana y Android puede responder "cancelado" antes de que elijas,
+    // así que solo un "sí" cuenta aquí; el resto lo confirma onResume preguntándoles a las gafas.
+    private val permisoCamaraGafas = registerForActivityResult(Wearables.RequestPermissionContract()) { resultado ->
+        resultado
+            .onSuccess { if (it == PermissionStatus.Granted) Gafas.camaraPermitidaEnMetaAi() }
+            .onFailure { error, _ ->
+                Diario.error("Meta AI no pudo dar el permiso de cámara: ${error.description}")
+                Estado.avisar("Meta AI no respondió: ${error.description}")
+            }
         refresco.intValue++
     }
 

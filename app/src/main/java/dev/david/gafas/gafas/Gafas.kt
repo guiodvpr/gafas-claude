@@ -11,6 +11,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -23,6 +24,7 @@ import kotlinx.coroutines.launch
 object Gafas {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var seguimientoDeBateria: Job? = null
+    private var revision: Job? = null
 
     @Volatile
     var listo = false
@@ -83,13 +85,47 @@ object Gafas {
 
     private fun porcentaje(valor: Int?): Int? = valor?.takeIf { it in 0..100 }
 
-    /** El permiso de cámara lo da la persona dentro de la app Meta AI; aquí solo se consulta. */
+    /**
+     * El permiso de cámara lo da la persona dentro de la app Meta AI; aquí solo se consulta.
+     * Al volver de Meta AI las gafas tardan unos segundos en enterarse del permiso nuevo,
+     * así que si dicen que no se les vuelve a preguntar un par de veces antes de creerles.
+     */
     fun revisarPermisoDeCamara() {
         if (!listo) return
-        scope.launch {
-            Wearables.checkPermissionStatus(Permission.CAMERA).onSuccess { estado ->
-                Estado.gafas.update { it.copy(camaraPermitida = estado == PermissionStatus.Granted) }
+        revision?.cancel()
+        revision = scope.launch {
+            repeat(INTENTOS_PERMISO) { intento ->
+                if (intento > 0) delay(ESPERA_PERMISO_MS)
+                if (consultarPermisoDeCamara().getOrNull() == true) return@launch
             }
         }
     }
+
+    /**
+     * Les pregunta a las gafas si la cámara está permitida. Falla cuando no se pudo preguntar
+     * (gafas apagadas, sin conexión, tiempo agotado), que no es lo mismo que un "no": en ese
+     * caso se conserva lo último que se supo.
+     */
+    suspend fun consultarPermisoDeCamara(): Result<Boolean> {
+        var respuesta: Result<Boolean> = Result.failure(IllegalStateException("el SDK no respondió"))
+        Wearables.checkPermissionStatus(Permission.CAMERA)
+            .onSuccess { estado -> respuesta = Result.success(estado == PermissionStatus.Granted) }
+            .onFailure { error, _ -> respuesta = Result.failure(IllegalStateException(error.description)) }
+        respuesta
+            .onSuccess { anotarPermiso(it, "las gafas") }
+            .onFailure { Diario.error("No pude preguntarles a las gafas por la cámara: ${it.message}") }
+        return respuesta
+    }
+
+    /** Meta AI confirmó que la persona permitió la cámara. */
+    fun camaraPermitidaEnMetaAi() = anotarPermiso(true, "Meta AI")
+
+    private fun anotarPermiso(permitido: Boolean, fuente: String) {
+        val antes = Estado.gafas.value.camaraPermitida
+        Estado.gafas.update { it.copy(camaraPermitida = permitido) }
+        if (permitido != antes) Diario.info("Cámara de las gafas ${if (permitido) "permitida" else "sin permiso"} (según $fuente)")
+    }
+
+    private const val INTENTOS_PERMISO = 4
+    private const val ESPERA_PERMISO_MS = 2_500L
 }

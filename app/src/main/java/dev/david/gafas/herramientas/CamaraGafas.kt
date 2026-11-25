@@ -16,8 +16,6 @@ import com.meta.wearable.dat.core.Wearables
 import com.meta.wearable.dat.core.selectors.AutoDeviceSelector
 import com.meta.wearable.dat.core.session.DeviceSession
 import com.meta.wearable.dat.core.session.DeviceSessionState
-import com.meta.wearable.dat.core.types.Permission
-import com.meta.wearable.dat.core.types.PermissionStatus
 import dev.david.gafas.gafas.Gafas
 import dev.david.gafas.nucleo.Diario
 import dev.david.gafas.nucleo.Estado
@@ -34,7 +32,6 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -121,11 +118,14 @@ class CamaraGafas(private val context: Context) : Herramienta {
         if (!Estado.gafas.value.registrada) {
             throw Falla("La cámara no está conectada todavía: en la app, toca Conectar con Meta AI.")
         }
-        var permiso: PermissionStatus? = null
-        Wearables.checkPermissionStatus(Permission.CAMERA).onSuccess { permiso = it }
-        val permitido = permiso == PermissionStatus.Granted
-        Estado.gafas.update { it.copy(camaraPermitida = permitido) }
-        if (!permitido) throw Falla("Falta el permiso de cámara de las gafas: en la app, toca Permitir cámara.")
+        // Si las gafas no contestan se intenta igual con lo último que se supo: la foto misma dirá si falla
+        Gafas.consultarPermisoDeCamara()
+            .onSuccess { if (!it) throw Falla("Falta el permiso de cámara de las gafas: en la app, toca Permitir cámara.") }
+            .onFailure {
+                if (!Estado.gafas.value.camaraPermitida) {
+                    throw Falla("No pude comprobar el permiso de cámara con las gafas (${it.message}). ¿Están puestas y conectadas?")
+                }
+            }
 
         cierreProgramado?.cancel()
         val activa = sesionLista() ?: throw Falla("No logré conectarme a las gafas. ¿Están puestas y encendidas?")
