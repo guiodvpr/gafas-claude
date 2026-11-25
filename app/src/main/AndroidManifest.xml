@@ -17,6 +17,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <!-- Capacidades opcionales: cada una se pide solo si la enciendes -->
     <uses-permission android:name="android.permission.READ_CALENDAR" />
@@ -63,6 +64,23 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="gafasclaude" />
+            </intent-filter>
+        </activity>
+
+        <!-- Acceso directo invisible para el botón lateral: toma la foto y se cierra al instante -->
+        <activity
+            android:name=".FotoRapidaActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:icon="@mipmap/ic_launcher"
+            android:label="Foto parcial"
+            android:noHistory="true"
+            android:showWhenLocked="true"
+            android:taskAffinity="dev.david.gafas.foto"
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 

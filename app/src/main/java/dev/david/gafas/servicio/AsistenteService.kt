@@ -110,6 +110,8 @@ class AsistenteService : Service() {
                 stopSelf()
             }
             ACCION_CALLAR -> if (listo) callar() else if (!arrancado) stopSelf()
+            // Siempre foto → respuesta corta, esté o no prendido el modo parcial (acceso directo del botón lateral)
+            ACCION_FOTO -> if (listo) fotografiar() else if (!arrancado) stopSelf()
             ACCION_TEXTO -> {
                 val texto = intent.getStringExtra(EXTRA_TEXTO).orEmpty().trim()
                 if (listo && texto.isNotEmpty()) preguntarPorEscrito(texto) else if (!arrancado) stopSelf()
@@ -688,6 +690,7 @@ class AsistenteService : Service() {
     companion object {
         const val ACCION_HABLAR = "dev.david.gafas.HABLAR"
         const val ACCION_CALLAR = "dev.david.gafas.CALLAR"
+        const val ACCION_FOTO = "dev.david.gafas.FOTO"
         const val ACCION_DETENER = "dev.david.gafas.DETENER"
         const val ACCION_TEXTO = "dev.david.gafas.TEXTO"
         const val EXTRA_TEXTO = "texto"
