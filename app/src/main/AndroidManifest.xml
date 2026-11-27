@@ -54,10 +54,6 @@
             android:exported="true"
             android:launchMode="singleTop"
             android:windowSoftInputMode="adjustResize">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
             <!-- Meta AI devuelve aquí a la persona después de conectar la app -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -67,16 +63,16 @@
             </intent-filter>
         </activity>
 
-        <!-- Acceso directo invisible para el botón lateral: toma la foto y se cierra al instante -->
+        <!-- Puerta de entrada: el ícono y el botón lateral abren esto. Bloqueado = foto; desbloqueado = abre la app -->
         <activity
-            android:name=".FotoRapidaActivity"
+            android:name=".EntradaActivity"
             android:exported="true"
             android:excludeFromRecents="true"
             android:icon="@mipmap/ic_launcher"
-            android:label="Foto parcial"
+            android:label="Gafas + Claude"
             android:noHistory="true"
             android:showWhenLocked="true"
-            android:taskAffinity="dev.david.gafas.foto"
+            android:taskAffinity="dev.david.gafas.entrada"
             android:theme="@android:style/Theme.NoDisplay">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
